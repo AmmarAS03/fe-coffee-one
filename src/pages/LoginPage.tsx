@@ -1,18 +1,34 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import EyeIcon from "../icon/eye";
+import { useAuth } from "../context/AuthContext";
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    console.log("Sending login request with:", { email, password });
 
-    console.log("Login submitted", { email, password });
-    navigate("/order");
+    try {
+      await login(email, password);
+      // Redirect based on user role
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      if (user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/order');
+      }
+    } catch (err) {
+      setError("Invalid email or password");
+      console.error('Login error:', err);
+    }
   };
 
   return (
@@ -24,6 +40,9 @@ const LoginPage: React.FC = () => {
           </h2>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {error && (
+            <div className="text-red-500 text-center">{error}</div>
+          )}
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
               <label htmlFor="email-address" className="sr-only">
@@ -61,15 +80,7 @@ const LoginPage: React.FC = () => {
                 className="absolute inset-y-0 right-0 pr-3 flex items-center"
                 onClick={() => setShowPassword(!showPassword)}
               >
-                {showPassword ? (
-                  <div className="h-5 w-5 text-gray-400">
-                    <EyeIcon />
-                  </div>
-                ) : (
-                  <div className="h-5 w-5 text-gray-400">
-                    <EyeIcon />
-                  </div>
-                )}
+                <EyeIcon />
               </button>
             </div>
           </div>

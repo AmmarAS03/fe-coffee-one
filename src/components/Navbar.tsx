@@ -1,8 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import OrdersIcon from "../icon/order";
 
 const Navbar: React.FC = () => {
+  const { user } = useAuth();
   return (
     <nav className="bg-gray-800 p-4">
       <div className="container mx-auto">
