@@ -1,86 +1,22 @@
-import React, { useEffect, useRef, useState } from "react";
-
-// Define types
-type DeliveryOption = "Pickup" | "Delivery";
-
-interface Order {
-  coffee: string;
-  name: string;
-  delivery: DeliveryOption;
-  roomLocation: string;
-}
+import React, { useState, useEffect } from "react";
+import { fetchOrderSummary, OrderSummary } from "../api/orderSummary";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 type TimeSlot = "7am" | "10am" | "1pm" | "5pm";
 
 type OrdersByTime = {
-  [key in TimeSlot]: Order[];
+  [key in TimeSlot]: OrderSummary[];
 };
 
-// Mock data for orders
-const mockOrders: OrdersByTime = {
-  "7am": [
-    {
-      coffee: "Espresso",
-      name: "John Doe",
-      delivery: "Pickup",
-      roomLocation: "-",
-    },
-    {
-      coffee: "Latte",
-      name: "Jane Smith",
-      delivery: "Delivery",
-      roomLocation: "Elizabeth Building Room 1103",
-    },
-  ],
-  "10am": [
-    {
-      coffee: "Cappuccino",
-      name: "Alice Johnson",
-      delivery: "Pickup",
-      roomLocation: "-",
-    },
-    {
-      coffee: "Americano",
-      name: "Bob Williams",
-      delivery: "Delivery",
-      roomLocation: "Elizabeth Building Room 1103",
-    },
-  ],
-  "1pm": [
-    {
-      coffee: "Mocha",
-      name: "Charlie Brown",
-      delivery: "Pickup",
-      roomLocation: "-",
-    },
-    {
-      coffee: "Flat White",
-      name: "Diana Prince",
-      delivery: "Delivery",
-      roomLocation: "Elizabeth Building Room 1103",
-    },
-  ],
-  "5pm": [
-    {
-      coffee: "Cold Brew",
-      name: "Eva Green",
-      delivery: "Pickup",
-      roomLocation: "-",
-    },
-    {
-      coffee: "Iced Latte",
-      name: "Frank Castle",
-      delivery: "Delivery",
-      roomLocation: "Elizabeth Building Room 1103",
-    },
-  ],
-};
+const TIME_SLOTS: TimeSlot[] = ["7am", "10am", "1pm", "5pm"];
 
-const OrderTable: React.FC<{ orders: Order[] }> = ({ orders }) => (
+const OrderTable: React.FC<{ orders: OrderSummary[] }> = ({ orders }) => (
   <table className="w-full border-collapse">
     <thead>
       <tr className="bg-gray-100">
         <th className="p-3 text-left border-b">Coffee</th>
+        <th className="p-3 text-left border-b">Quantity</th>
         <th className="p-3 text-left border-b">Name</th>
         <th className="p-3 text-left border-b">Delivery Option</th>
         <th className="p-3 text-left border-b">Room Location</th>
@@ -89,10 +25,11 @@ const OrderTable: React.FC<{ orders: Order[] }> = ({ orders }) => (
     <tbody>
       {orders.map((order, index) => (
         <tr key={index} className="hover:bg-gray-50">
-          <td className="p-3 border-b">{order.coffee}</td>
+          <td className="p-3 border-b">{order.coffee_name}</td>
+          <td className="p-3 border-b">{order.quantity}</td>
           <td className="p-3 border-b">{order.name}</td>
-          <td className="p-3 border-b">{order.delivery}</td>
-          <td className="p-3 border-b">{order.roomLocation}</td>
+          <td className="p-3 border-b">{order.delivery_option}</td>
+          <td className="p-3 border-b">{order.building} - {order.room_location}</td>
         </tr>
       ))}
     </tbody>
@@ -105,7 +42,7 @@ const CollapsibleSection: React.FC<{
 }> = ({ title, children }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [height, setHeight] = useState<number | undefined>(undefined);
-  const ref = useRef<HTMLDivElement>(null);
+  const ref = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -145,17 +82,103 @@ const CollapsibleSection: React.FC<{
 };
 
 const Dashboard: React.FC = () => {
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [ordersByTime, setOrdersByTime] = useState<OrdersByTime>({
+    "7am": [],
+    "10am": [],
+    "1pm": [],
+    "5pm": [],
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setIsLoading(true);
+        const formattedDate = selectedDate.toISOString().split("T")[0];
+        const orders = await fetchOrderSummary(formattedDate);
+
+        const groupedOrders = TIME_SLOTS.reduce((acc, timeSlot) => {
+          acc[timeSlot] = orders.filter(
+            (order) => order.selected_time === timeSlot
+          );
+          return acc;
+        }, {} as OrdersByTime);
+
+        setOrdersByTime(groupedOrders);
+        setIsLoading(false);
+      } catch (err) {
+        setError("Failed to fetch orders. Please try again later.");
+        setIsLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, [selectedDate]);
+
+  const handleDateChange = (date: Date | null) => {
+    if (date) {
+      setSelectedDate(date);
+    }
+  };
+
+  const getWeekRange = () => {
+    const today = new Date();
+    const startOfWeek = new Date(
+      today.setDate(today.getDate() - today.getDay())
+    );
+    const endOfWeek = new Date(
+      today.setDate(today.getDate() - today.getDay() + 14)
+    );
+    return { startOfWeek, endOfWeek };
+  };
+
+  const { startOfWeek, endOfWeek } = getWeekRange();
+
+  if (isLoading) {
+    return <div className="p-6">Loading...</div>;
+  }
+
+  if (error) {
+    return <div className="p-6 text-red-500">{error}</div>;
+  }
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
+      <div className="mb-6">
+        <label
+          htmlFor="date-picker"
+          className="block text-sm font-medium text-gray-700 mb-2"
+        >
+          Showing for:
+        </label>
+        <DatePicker
+          id="date-picker"
+          selected={selectedDate}
+          onChange={handleDateChange}
+          minDate={startOfWeek}
+          maxDate={endOfWeek}
+          dateFormat="yyyy-MM-dd"
+          className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        />
+      </div>
       <div>
-        {(Object.entries(mockOrders) as [TimeSlot, Order[]][]).map(
-          ([time, orders]) => (
-            <CollapsibleSection key={time} title={`Today's Orders - ${time}`}>
-              <OrderTable orders={orders} />
-            </CollapsibleSection>
-          )
-        )}
+        {TIME_SLOTS.map((timeSlot) => {
+          const orders = ordersByTime[timeSlot];
+          if (orders && orders.length > 0) {
+            return (
+              <CollapsibleSection
+                key={timeSlot}
+                title={`Orders for ${selectedDate.toDateString()} - ${timeSlot}`}
+              >
+                <OrderTable orders={orders} />
+              </CollapsibleSection>
+            );
+          }
+          return ( <></>);
+        })}
       </div>
     </div>
   );
