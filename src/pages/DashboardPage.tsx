@@ -96,7 +96,7 @@ const Dashboard: React.FC = () => {
     const fetchOrders = async () => {
       try {
         setIsLoading(true);
-        const formattedDate = selectedDate.toISOString().split("T")[0];
+        const formattedDate = selectedDate.toLocaleDateString('en-CA');
         const orders = await fetchOrderSummary(formattedDate);
 
         const groupedOrders = TIME_SLOTS.reduce((acc, timeSlot) => {
@@ -143,6 +143,7 @@ const Dashboard: React.FC = () => {
   if (error) {
     return <div className="p-6 text-red-500">{error}</div>;
   }
+
 
   return (
     <div className="p-6">
