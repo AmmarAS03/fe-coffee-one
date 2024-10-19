@@ -12,6 +12,7 @@ interface User {
 interface AuthContextType {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   user: User | null;
   getToken: () => string | null;
@@ -20,6 +21,8 @@ interface AuthContextType {
 interface AuthProviderProps {
   children: ReactNode;
 }
+
+const API_BASE_URL = 'http://localhost:5432';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -55,9 +58,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('user', JSON.stringify(data.user));
       setIsAuthenticated(true);
       setUser(data.user);
-      console.log("LOGIN BERHASIL")
     } catch (error) {
       console.error('Login error:', error);
+      throw error;
+    }
+  };
+
+  const register = async (name: string, email: string, password: string) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Registration failed');
+      }
+
+      const data = await response.json();
+      console.log("REGISTRATION SUCCESSFUL")
+
+      // Automatically login after successful registration
+      await login(email, password);
+    } catch (error) {
+      console.error('Registration error:', error);
       throw error;
     }
   };
@@ -74,7 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, user, getToken }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, logout, user, getToken, register }}>
       {children}
     </AuthContext.Provider>
   );

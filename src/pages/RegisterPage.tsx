@@ -1,25 +1,39 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import EyeIcon from "../icon/eye";
 
 const RegisterPage: React.FC = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [roomNumber, setRoomNumber] = useState('');
-  const [building, setBuilding] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
+  const { register } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle registration logic here
-    console.log('Registration submitted', { name, email, password, confirmPassword, roomNumber, building });
-    navigate("/order");
-    
+
+    if (password !== confirmPassword) {
+      setError("Password Don't Match!");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      await register(name, email, password);
+      navigate('/order');
+    } catch (err) {
+      setError("Registration failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -70,7 +84,7 @@ const RegisterPage: React.FC = () => {
               <input
                 id="password"
                 name="password"
-                type={showPassword ? 'text' : 'password'}
+                type={showPassword ? "text" : "password"}
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Password"
@@ -100,7 +114,7 @@ const RegisterPage: React.FC = () => {
               <input
                 id="confirm-password"
                 name="confirm-password"
-                type={showConfirmPassword ? 'text' : 'password'}
+                type={showConfirmPassword ? "text" : "password"}
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
                 placeholder="Confirm Password"
@@ -123,50 +137,24 @@ const RegisterPage: React.FC = () => {
                 )}
               </button>
             </div>
-            <div>
-              <label htmlFor="room-number" className="sr-only">
-                Room Number
-              </label>
-              <input
-                id="room-number"
-                name="room-number"
-                type="text"
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                placeholder="Room Number"
-                value={roomNumber}
-                onChange={(e) => setRoomNumber(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="building" className="sr-only">
-                Building
-              </label>
-              <select
-                id="building"
-                name="building"
-                required
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
-                value={building}
-                onChange={(e) => setBuilding(e.target.value)}
-              >
-                <option value="">Select Building</option>
-                <option value="elizabeth">Student One Elizabeth Street</option>
-                <option value="charlotte">Student One Charlotte Street</option>
-              </select>
-            </div>
           </div>
 
           <div>
             <button
               type="submit"
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={isLoading}
             >
-              Register
+              {isLoading ? "Registering..." : "Register"}
             </button>
           </div>
         </form>
+        {error && <p className="text-center">{error}</p>}
         <div className="text-center">
-          <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+          <Link
+            to="/login"
+            className="font-medium text-indigo-600 hover:text-indigo-500"
+          >
             Already have an account? Sign in here
           </Link>
         </div>
