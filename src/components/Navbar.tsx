@@ -41,7 +41,7 @@ const Navbar: React.FC = () => {
                     Order
                   </Link>
                 )}
-                {user?.role !== "admin" && (
+                {isAuthenticated && user?.role !== "admin" && (
                   <Link
                     to="/order-history"
                     className="text-white hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition duration-300 ease-in-out"

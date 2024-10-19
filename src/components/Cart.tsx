@@ -6,7 +6,6 @@ import DecrementIcon from "../icon/decrement";
 const Cart: React.FC = () => {
     const { cart, removeFromCart } = useCart();
     const navigate = useNavigate();
-    console.log("cart dari order: ", cart)
   
     const handleCheckout = () => {
       navigate('/checkout');
